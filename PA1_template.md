@@ -5,14 +5,27 @@ output:
     keep_md: true
 ---
 
-```{r,echo = TRUE}
+
+``` r
 library(ggplot2)
+```
+
+```
+## Warning: package 'ggplot2' was built under R version 4.5.1
 ```
 
 ## Loading and preprocessing the data
 
-```{r,echo = TRUE}
+
+``` r
 dir("repdata_data_activity")
+```
+
+```
+## [1] "activity.csv"
+```
+
+``` r
 activity.ori <- read.csv("repdata_data_activity/activity.csv")
 activity_clean <-na.omit(activity.ori)
 activity <- activity_clean[!activity_clean$steps == 0,]
@@ -21,7 +34,8 @@ activity <- activity_clean[!activity_clean$steps == 0,]
 
 ## What is mean total number of steps taken per day?
 
-```{r,echo = TRUE}
+
+``` r
 df <- aggregate(steps ~ date, data = na.omit(activity.ori), FUN = sum, na.rm = T) #na.omit(activity.ori)
 hist(df$steps,
      breaks = 20,  # Adjust number of bins as needed
@@ -41,11 +55,13 @@ legend("topright",
        legend = c(paste("Mean:", round(mean(df$steps))),
                  paste("Median:", round(median(df$steps)))),
        col = c("red", "blue"), lty = 2, lwd = 2)
-
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+
 ## What is the average daily activity pattern?
-```{r,echo = TRUE}
+
+``` r
 interval_steps <-  data.frame(tapply(activity_clean$steps, activity_clean$interval, mean))
 interval_steps<- data.frame(interval_steps)
 colnames(interval_steps) <- "steps"
@@ -61,18 +77,49 @@ plot(interval_steps$interval, interval_steps$steps,
      lwd = 1)
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
+
 ## Imputing missing values
-```{r,echo = TRUE}
+
+``` r
 interval_steps <- aggregate(steps ~ interval   , data = activity_clean, FUN = mean, na.rm = TRUE)
 data_na_impute <- merge(activity.ori[is.na(activity.ori$steps),-1],interval_steps , by = "interval")
 
 library(dplyr)
+```
+
+```
+## 
+## Attaching package: 'dplyr'
+```
+
+```
+## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+```
+
+```
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+```
+
+``` r
 activity_imputed <- rbind(data_na_impute, activity_clean) %>% arrange(date, interval)
 
 str(activity_imputed)
 ```
 
-```{r,echo = TRUE}
+```
+## 'data.frame':	17568 obs. of  3 variables:
+##  $ interval: int  0 5 10 15 20 25 30 35 40 45 ...
+##  $ date    : chr  "2012-10-01" "2012-10-01" "2012-10-01" "2012-10-01" ...
+##  $ steps   : num  1.717 0.3396 0.1321 0.1509 0.0755 ...
+```
+
+
+``` r
 ds2 <- aggregate( steps ~ date, data = activity_imputed, FUN = sum, na.rm = TRUE)
 
 # Create histogram with proper binning and labels
@@ -96,14 +143,18 @@ legend("topright",
        col = c("red", "blue"), lty = 2, lwd = 2)
 ```
 
-```{r,echo = TRUE}
+![](PA1_template_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
+
+
+``` r
 activity.ori$weekdays <- weekdays(as.Date(activity.ori$date))
 activity.ori$day_type <- "Weekday"
 activity.ori[activity.ori$weekdays %in% c("Saturday", "Sunday"),]$day_type <- "weekend"
 ```
 
 
-```{r,echo = TRUE}
+
+``` r
 original_mean  <- mean(df$steps)
 imputed_mean <- mean(ds2$steps)
 
@@ -120,10 +171,16 @@ comparison <- data.frame(
 print(comparison)
 ```
 
+```
+##   Metric Original_data Imputed_data Difference
+## 1   Mean      10766.19     10766.19   0.000000
+## 2 Median      10765.00     10766.19   1.188679
+```
+
 
 ## Are there differences in activity patterns between weekdays and weekends?
-```{r,echo = TRUE}
 
+``` r
 # Create panel plot by day type
 ggplot(activity.ori, aes(x = interval, y = steps)) +
   geom_line(stat = "summary", fun = mean, color = "steelblue") +
@@ -133,3 +190,10 @@ ggplot(activity.ori, aes(x = interval, y = steps)) +
        y = "Average Number of Steps") +
   theme_minimal()
 ```
+
+```
+## Warning: Removed 2304 rows containing non-finite outside the scale range
+## (`stat_summary()`).
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
