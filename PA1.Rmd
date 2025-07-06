@@ -1,0 +1,135 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r,echo = TRUE}
+library(ggplot2)
+```
+
+## Loading and preprocessing the data
+
+```{r,echo = TRUE}
+dir("repdata_data_activity")
+activity.ori <- read.csv("repdata_data_activity/activity.csv")
+activity_clean <-na.omit(activity.ori)
+activity <- activity_clean[!activity_clean$steps == 0,]
+```
+
+
+## What is mean total number of steps taken per day?
+
+```{r,echo = TRUE}
+df <- aggregate(steps ~ date, data = na.omit(activity.ori), FUN = sum, na.rm = T) #na.omit(activity.ori)
+hist(df$steps,
+     breaks = 20,  # Adjust number of bins as needed
+     col = "lightblue",
+     main = "Histogram of Total Steps Taken Per Day",
+     xlab = "Total Number of Steps",
+     ylab = "Frequency (Number of Days)",
+     border = "white")
+
+# Add mean and median lines
+abline(v = mean(df$steps), col = "red", lwd = 2, lty = 1)
+abline(v = median(df$steps), col = "blue", lwd = 2, lty = 2)
+
+
+# Add legend
+legend("topright", 
+       legend = c(paste("Mean:", round(mean(df$steps))),
+                 paste("Median:", round(median(df$steps)))),
+       col = c("red", "blue"), lty = 2, lwd = 2)
+
+```
+
+## What is the average daily activity pattern?
+```{r,echo = TRUE}
+interval_steps <-  data.frame(tapply(activity_clean$steps, activity_clean$interval, mean))
+interval_steps<- data.frame(interval_steps)
+colnames(interval_steps) <- "steps"
+interval_steps$interval <-rownames(interval_steps)
+
+# Create time series plot
+plot(interval_steps$interval, interval_steps$steps, 
+     type = "l",
+     xlab = "5 minute Interval", 
+     ylab = "Average Steps",
+     main = "Daily Average Activity Pattern",
+     col = "red",
+     lwd = 1)
+```
+
+## Imputing missing values
+```{r,echo = TRUE}
+interval_steps <- aggregate(steps ~ interval   , data = activity_clean, FUN = mean, na.rm = TRUE)
+data_na_impute <- merge(activity.ori[is.na(activity.ori$steps),-1],interval_steps , by = "interval")
+
+library(dplyr)
+activity_imputed <- rbind(data_na_impute, activity_clean) %>% arrange(date, interval)
+
+str(activity_imputed)
+```
+
+```{r,echo = TRUE}
+ds2 <- aggregate( steps ~ date, data = activity_imputed, FUN = sum, na.rm = TRUE)
+
+# Create histogram with proper binning and labels
+hist(ds2$steps,
+     breaks = 20,  # Adjust number of bins as needed
+     col = "lightblue",
+     main = "Histogram of Average Steps Taken Per Day",
+     xlab = "Total Number of Steps",
+     ylab = "Frequency (Number of Days)",
+     border = "white")
+
+# Add mean and median lines
+abline(v = mean(ds2$steps), col = "red", lwd = 2, lty = 1)
+abline(v = median(ds2$steps), col = "blue", lwd = 2, lty = 2)
+
+
+# Add legend
+legend("topright", 
+       legend = c(paste("Mean:", round(mean(ds2$steps))),
+                 paste("Median:", round(median(ds2$steps)))),
+       col = c("red", "blue"), lty = 2, lwd = 2)
+```
+
+```{r,echo = TRUE}
+activity.ori$weekdays <- weekdays(as.Date(activity.ori$date))
+activity.ori$day_type <- "Weekday"
+activity.ori[activity.ori$weekdays %in% c("Saturday", "Sunday"),]$day_type <- "weekend"
+```
+
+
+```{r,echo = TRUE}
+original_mean  <- mean(df$steps)
+imputed_mean <- mean(ds2$steps)
+
+original_median <- median(df$steps)
+imputed_median <- median(ds2$steps)
+
+comparison <- data.frame(
+  Metric = c("Mean", "Median"),
+  Original_data = c(original_mean, original_median),
+  Imputed_data = c(imputed_mean, imputed_median),
+  Difference = c(imputed_mean - original_mean, imputed_median - original_median)
+)
+
+print(comparison)
+```
+
+
+## Are there differences in activity patterns between weekdays and weekends?
+```{r,echo = TRUE}
+
+# Create panel plot by day type
+ggplot(activity.ori, aes(x = interval, y = steps)) +
+  geom_line(stat = "summary", fun = mean, color = "steelblue") +
+  facet_wrap(~ day_type, ncol = 1) +
+  labs(title = "Activity Patterns: Weekdays vs Weekends",
+       x = "5-minute Interval",
+       y = "Average Number of Steps") +
+  theme_minimal()
+```
